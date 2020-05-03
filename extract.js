@@ -32,7 +32,8 @@ function addWay(way){
 }
 
 function saveResults(){
-	console.log(JSON.stringify(data));
+	var json = {name:"test map", elements: data};
+	console.log(JSON.stringify(json));
 }
 
 
