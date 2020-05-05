@@ -1,13 +1,16 @@
+//Process extracted Map Data into Nodes and Edges
+
 var fs = require('fs')
 var es = require('event-stream');
 var d3 = require('d3-geo');
 var BBox = require('./bbox.js');
 var JSONStream = require('JSONStream');
 
-var latlonBox = new BBox();
-var testarr = [];
+var mercBox = new BBox();
 var projector = d3.geoMercator();
-var nodes = new Map();
+
+var nodeList = [];
+var nodeIDMap = new Map();
 var ways = [];
 
 fs.createReadStream('./data.json')
@@ -24,27 +27,41 @@ function callback(el){
 }
 
 function processNode(node){
+	//Mercator projection
 	let xy = projector([node.lon, node.lat]);	
-	var point = {id: node.id, x: xy[0], y: xy[1]};
+	
+	//Compress node ID and map
+	const newId = nodeIDMap.size;
+	nodeIDMap.set(node.id, newId);
 
-	latlonBox.addPoint(point);
-	testarr.push(point);
+	var point = {id: newId, x: xy[0], y: xy[1]};
+
+	//Add to mercator bounding box and node list
+	mercBox.addPoint(point);
+	nodeList.push(point);
 }
 
 function processWay(way){
 	ways.push(way);
 }
+
 function saveResults(){
-	testarr.forEach((point) =>{
-		latlonBox.normalizePoint(point);
+	//Create hashmap of nodes
+	var nodes = new Map();
+	nodeList.forEach((point) =>{
+		mercBox.normalizePoint(point);
 		nodes.set(point.id, {x: point.x, y: point.y});
 	});
 	
-	var segs = [];
-
+	//Create flat array of graph edges
+	var edges = [];
 	ways.forEach((way) => {
-		
-	});
+		let nodeRefs = way.nodeRefs;
+		let prev = 0;
 
-	console.log(testarr);
+		for(let i = 1; i < nodeRefs.length; i++){
+			edges.push([ nodeIDMap.get(nodeRefs[prev]), nodeIDMap.get(nodeRefs[i]) ]);	
+			prev = i;
+		}
+	});
 }
